@@ -5,6 +5,7 @@
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.layers import *
+import numpy as np
 
 
 class DLDMD(keras.Model):
@@ -78,7 +79,7 @@ class DLDMD(keras.Model):
         yt = tf.transpose(y, [0, 2, 1])
 
         # Generate latent time series using DMD prediction
-        y_adv, evals, evecs, phi = self.edmd(yt)
+        y_adv, evals, evecs, phi = self.cmdmd(yt)
 
         # Decode the latent trajectories
         x_adv = self.decoder(y_adv)
@@ -111,6 +112,48 @@ class DLDMD(keras.Model):
             evals_k = evals_k * evals
         recon = tf.math.real(tf.transpose(tf.squeeze(recon.stack()), perm=[1, 0, 2]))
         return recon, evals, evecs, phi
+
+    def cmdmd(self, tfdata):
+        # assign values for regression
+        data = tfdata.numpy()
+
+        #stack data
+        stacked_data = np.zeros([data.shape[0]*data.shape[1], data.shape[2]])
+        for i in range(data.shape[1]):
+            stacked_data[(i)*data.shape[0]:(i+1)*data.shape[0],:] = data[:,i,:]
+
+        y0 = stacked_data[:,0]
+        y = stacked_data[:,-1]
+        X = stacked_data[:,:-1]
+
+        #svd and building companion matrix
+        u, s, vh = np.linalg.svd(X, full_matrices=False)
+        v = np.conj(vh.T)
+            
+        c = v @ np.diag(1. / s) @ np.conj(u.T) @ y
+        comp_mat = np.diag(np.array([1.]*(self.num_time_steps-2)), k = -1)
+        comp_mat[:,-1] = c
+
+        #calculating eigenvalues/vectors/modes
+        evals, evecs = np.linalg.eig(comp_mat)
+        modes = X.dot(evecs)
+        amps = np.linalg.pinv(modes) @ y0
+
+        #reconstruction
+        temp = np.repeat(evals[:, None], self.num_time_steps, axis=1)
+        tpow = self.num_pred_steps
+        Psi = np.power(temp, tpow) * amps[:, None]
+
+        recon = modes.dot(Psi)
+
+        #unstack data
+        unstacked_data = np.zeros([data.shape[0], data.shape[2], data.shape[1]])
+        for i in range(data.shape[1]):
+            unstacked_data[:,:,i] = np.real(recon[(i)*data.shape[0]:(i+1)*data.shape[0],:])
+
+        recon = tf.convert_to_tensor(unstacked_data, dtype = 'float64')
+
+        return recon, evals, evecs, modes
 
     def get_config(self):
         base_config = super().get_config()
