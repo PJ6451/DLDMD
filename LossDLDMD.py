@@ -24,25 +24,26 @@ class LossDLDMD(keras.losses.Loss):
         self.loss_dmd = tf.constant(0.0, dtype=self.precision)
         self.loss_reg = tf.constant(0.0, dtype=self.precision)
         self.total_loss = tf.constant(0.0, dtype=self.precision)
+        self.num_recon_steps = int(hyp_params['num_recon_steps'])
 
     def call(self, model, obs):
         """
-            model = [y, x_ae, x_adv, y_adv_real, weights, evals, evecs, phi]
+            model = [y, x_ae, x_adv, y_adv, weights, evals, evecs, phi]
         """
         y = tf.identity(model[0])
         x_ae = tf.identity(model[1])
         x_adv = tf.identity(model[2])
+        y_adv = tf.identity(model[3])
         weights = model[4]
-        pred_horizon = -1
 
         # Autoencoder reconstruction
         self.loss_recon = tf.reduce_mean(MSE(obs, x_ae))
 
         # DMD reconstruction in the latent space
-        self.loss_dmd = self.dmdloss(y)
+        self.loss_dmd = tf.reduce_mean(MSE(y[:, :self.num_recon_steps, :], y_adv[:, :self.num_recon_steps, :]))
 
         # Future state prediction
-        self.loss_pred = tf.reduce_mean(MSE(obs[:, :pred_horizon, :], x_adv[:, :pred_horizon, :]))
+        self.loss_pred = tf.reduce_mean(MSE(obs[:, self.num_recon_steps:, :], x_adv[:, self.num_recon_steps:, :]))
 
         # Regularization on weights
         self.loss_reg = tf.add_n([tf.nn.l2_loss(w) for w in weights])

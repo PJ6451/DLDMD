@@ -11,7 +11,7 @@ training_results/
 *.zip
 *.txt
 .DS_Store
-
+lorenz/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

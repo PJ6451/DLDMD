@@ -18,6 +18,7 @@ class DLDMD(keras.Model):
         self.latent_dim = hyp_params['latent_dim']
         self.num_time_steps = int(hyp_params['num_time_steps'])
         self.num_pred_steps = int(hyp_params['num_pred_steps'])
+        self.num_recon_steps = int(hyp_params['num_recon_steps'])
         self.time_final = hyp_params['time_final']
         self.num_en_layers = hyp_params['num_en_layers']
         self.num_neurons = hyp_params['num_en_neurons']
@@ -79,7 +80,7 @@ class DLDMD(keras.Model):
         yt = tf.transpose(y, [0, 2, 1])
 
         # Generate latent time series using DMD prediction
-        y_adv, evals, evecs, phi = self.cmdmd(yt)
+        y_adv, evals, evecs, phi = self.cmdmd(yt[:,:,:self.num_recon_steps])
 
         # Decode the latent trajectories
         x_adv = self.decoder(y_adv)
@@ -128,30 +129,25 @@ class DLDMD(keras.Model):
 
         #svd and building companion matrix
         u, s, vh = np.linalg.svd(X, full_matrices=False)
-        v = np.conj(vh.T)
-            
-        c = v @ np.diag(1. / s) @ np.conj(u.T) @ y
-        comp_mat = np.diag(np.array([1.]*(self.num_time_steps-2)), k = -1)
-        comp_mat[:,-1] = c
+
+        comp_mat = np.diag(np.array([1.]*(self.num_recon_steps-2)), k = -1)
+        comp_mat[:,-1] = np.conj(vh.T) @ np.diag(1. / s) @ np.conj(u.T) @ y
 
         #calculating eigenvalues/vectors/modes
         evals, evecs = np.linalg.eig(comp_mat)
         modes = X.dot(evecs)
-        amps = np.linalg.pinv(modes) @ y0
 
-        #reconstruction
-        temp = np.repeat(evals[:, None], self.num_time_steps, axis=1)
-        tpow = self.num_pred_steps
-        Psi = np.power(temp, tpow) * amps[:, None]
-
+        #Reconstruction, forecasting
+        Psi = np.vander(evals, N = self.num_pred_steps, increasing=True)
         recon = modes.dot(Psi)
 
         #unstack data
-        unstacked_data = np.zeros([data.shape[0], data.shape[2], data.shape[1]])
+        unstacked_data = np.zeros([data.shape[0], self.num_time_steps, data.shape[1]])
         for i in range(data.shape[1]):
             unstacked_data[:,:,i] = np.real(recon[(i)*data.shape[0]:(i+1)*data.shape[0],:])
 
         recon = tf.convert_to_tensor(unstacked_data, dtype = 'float64')
+        recon = tf.math.real(tf.squeeze(recon))
 
         return recon, evals, evecs, modes
 

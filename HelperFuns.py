@@ -7,7 +7,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib
 import numpy as np
 
-font = {'family': 'DejaVu Sans', 'size': 18}
+font = {'family': 'DejaVu Sans', 'size': 24}
 matplotlib.rc('font', **font)
 
 
@@ -15,7 +15,8 @@ def diagnostic_plot(y_pred, y_true, hyp_params, epoch, save_path, loss_comps, va
     if hyp_params['experiment'] == 'pendulum':
         plot_2D(y_pred, y_true, hyp_params, epoch, save_path, loss_comps, val_loss)
     elif hyp_params['experiment'] == 'duffing' or \
-            hyp_params['experiment'] == 'van_der_pol':
+            hyp_params['experiment'] == 'van_der_pol' or \
+                hyp_params['experiment'] == 'lorenz':
         plot_3d_latent(y_pred, y_true, hyp_params, epoch, save_path, loss_comps, val_loss)
     else:
         print("[ERROR] unknown experiment, create new diagnostic plots...")
@@ -121,10 +122,10 @@ def plot_2D(y_pred, y_true, hyp_params, epoch, save_path, loss_comps, val_loss):
 
 
 def plot_3d_latent(y_pred, y_true, hyp_params, epoch, save_path, loss_comps, val_loss):
-    enc = y_pred[0]
-    enc_dec = y_pred[1]
-    enc_adv_dec = y_pred[2]
-    enc_adv = y_pred[3]
+    enc_dec = y_pred[1].numpy()
+    enc_adv_dec = y_pred[2].numpy()
+    enc_adv = y_pred[3].numpy()
+    evals = y_pred[5]
 
     font = {'family': 'DejaVu Sans', 'size': 10}
     matplotlib.rc('font', **font)
@@ -133,53 +134,46 @@ def plot_3d_latent(y_pred, y_true, hyp_params, epoch, save_path, loss_comps, val
     fig = plt.figure(figsize=(40, 20))
 
     # Validation batch
-    ax = fig.add_subplot(3, 3, 1)
+    ax = fig.add_subplot(3, 3, 1, projection='3d')
     for ii in np.arange(0, y_true.shape[0], skip):
         ii = int(ii)
         x1 = y_true[ii, :, 0]
         x2 = y_true[ii, :, 1]
-        ax.plot(x1, x2)
+        x3 = y_true[ii, :, 2]
+        ax.plot3D(x1, x2, x3)
     ax.set_xlabel("$x_{1}$")
     ax.set_ylabel("$x_{2}$")
+    ax.set_zlabel("$x_{3}$")
     ax.set_title("Validation Data (x)")
 
     # Encoded-advanced-decoded time series
-    ax = fig.add_subplot(3, 3, 2)
+    ax = fig.add_subplot(3, 3, 2, projection='3d')
     for ii in np.arange(0, enc_adv_dec.shape[0], skip):
         ii = int(ii)
         x1 = enc_adv_dec[ii, :, 0]
         x2 = enc_adv_dec[ii, :, 1]
-        ax.plot(x1, x2)
+        x3 = enc_adv_dec[ii, :, 2]
+        ax.plot3D(x1, x2, x3)
     ax.set_xlabel("$x_{1}$")
     ax.set_ylabel("$x_{2}$")
+    ax.set_zlabel("$x_{3}$")
     ax.set_title("Encoded-Advanced-Decoded (x_adv))")
 
-    # Encoded time series
-    ax = fig.add_subplot(3, 3, 3, projection='3d')
-    for ii in np.arange(0, enc.shape[0], skip):
-        ii = int(ii)
-        x1 = enc[ii, :, 0]
-        x2 = enc[ii, :, 1]
-        x3 = enc[ii, :, 2]
-        ax.plot3D(x1, x2, x3)
-    ax.set_xlabel("$y_{1}$")
-    ax.set_ylabel("$y_{2}$")
-    ax.set_zlabel("$y_{3}$")
-    ax.set_title("Encoded (y)")
-
     # Encoded-decoded time series
-    ax = fig.add_subplot(3, 3, 4)
+    ax = fig.add_subplot(3, 3, 3, projection='3d')
     for ii in np.arange(0, enc_dec.shape[0], skip):
         ii = int(ii)
         x1 = enc_dec[ii, :, 0]
         x2 = enc_dec[ii, :, 1]
-        ax.plot(x1, x2)
+        x3 = enc_dec[ii, :, 2]
+        ax.plot3D(x1, x2, x3)
     ax.set_xlabel("$x_{1}$")
     ax.set_ylabel("$x_{2}$")
+    ax.set_zlabel("$x_{3}$")
     ax.set_title("Encoded-Decoded (x_ae)")
 
     # Encoded-advanced time series
-    ax = fig.add_subplot(3, 3, 5, projection='3d')
+    ax = fig.add_subplot(3, 3, 4, projection='3d')
     for ii in np.arange(0, enc_adv.shape[0], skip):
         ii = int(ii)
         x1 = enc_adv[ii, :, 0]
@@ -190,6 +184,15 @@ def plot_3d_latent(y_pred, y_true, hyp_params, epoch, save_path, loss_comps, val
     ax.set_ylabel("$y_{2}$")
     ax.set_zlabel("$y_{3}$")
     ax.set_title("Encoded-Advanced (y_adv))")
+
+    #Eigenvalues
+    ax = fig.add_subplot(3, 3, 5)
+    t = np.linspace(0, 2*np.pi, 300)
+    ax.plot(np.cos(t), np.sin(t), linewidth=1)
+    ax.scatter(np.real(evals), np.imag(evals))
+    ax.set_xlabel("Real$(\lambda)$")
+    ax.set_ylabel("Imag$(\lambda)$")
+    ax.set_title("Eigenvalues")
 
     # Loss components
     lw = 3
@@ -203,7 +206,7 @@ def plot_3d_latent(y_pred, y_true, hyp_params, epoch, save_path, loss_comps, val
     ax.legend(loc="upper right")
 
     ax = fig.add_subplot(3, 3, 7)
-    ax.plot(loss_comps[:, 0], color='r', linewidth=lw, label='recon')
+    ax.plot(loss_comps[:, 0], color='k', linewidth=lw, label='recon')
     ax.set_title("Recon Loss")
     ax.grid()
     ax.set_xlabel("Epoch")
@@ -211,7 +214,7 @@ def plot_3d_latent(y_pred, y_true, hyp_params, epoch, save_path, loss_comps, val
     ax.legend(loc="upper right")
 
     ax = fig.add_subplot(3, 3, 8)
-    ax.plot(loss_comps[:, 1], color='b', linewidth=lw, label='pred')
+    ax.plot(loss_comps[:, 1], color='k', linewidth=lw, label='pred')
     ax.set_title("Prediction Loss")
     ax.grid()
     ax.set_xlabel("Epoch")
@@ -219,7 +222,7 @@ def plot_3d_latent(y_pred, y_true, hyp_params, epoch, save_path, loss_comps, val
     ax.legend(loc="upper right")
 
     ax = fig.add_subplot(3, 3, 9)
-    ax.plot(loss_comps[:, 2], color='g', linewidth=lw, label='dmd')
+    ax.plot(loss_comps[:, 2], color='k', linewidth=lw, label='dmd')
     ax.set_title("DMD")
     ax.grid()
     ax.set_xlabel("Epoch")

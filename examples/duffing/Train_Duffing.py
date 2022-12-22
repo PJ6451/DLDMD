@@ -7,7 +7,7 @@ import pickle
 import datetime as dt
 import os
 import sys
-sys.path.insert(0, '../../')
+sys.path.insert(0, r"C:\Users\16617\Desktop\DLDMD_1")
 import DLDMD as dl
 import LossDLDMD as lf
 import Data as dat
@@ -49,11 +49,11 @@ hyp_params['plot_path'] = './training_results/' + hyp_params['experiment'] + '_'
 hyp_params['model_path'] = './trained_models/' + hyp_params['experiment'] + '_' + hyp_params['sim_start']
 hyp_params['device'] = DEVICE
 hyp_params['precision'] = tf.keras.backend.floatx()
-hyp_params['num_init_conds'] = 15000
-hyp_params['num_train_init_conds'] = 10000
-hyp_params['num_val_init_conds'] = 3000
-hyp_params['num_test_init_conds'] = 2000
-hyp_params['time_final'] = 20
+hyp_params['num_init_conds'] = 1500
+hyp_params['num_train_init_conds'] = 1000
+hyp_params['num_val_init_conds'] = 300
+hyp_params['num_test_init_conds'] = 200
+hyp_params['time_final'] = 10
 hyp_params['delta_t'] = 0.05
 hyp_params['num_time_steps'] = int(hyp_params['time_final']/hyp_params['delta_t'] + 1)
 hyp_params['num_pred_steps'] = hyp_params['num_time_steps']
