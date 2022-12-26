@@ -40,7 +40,7 @@ class LossDLDMD(keras.losses.Loss):
         self.loss_recon = tf.reduce_mean(MSE(obs, x_ae))
 
         # DMD reconstruction in the latent space
-        self.loss_dmd = tf.reduce_mean(MSE(y[:, :self.num_recon_steps, :], y_adv[:, :self.num_recon_steps, :]))
+        self.loss_dmd = tf.reduce_mean(MSE(y, y_adv))
 
         # Future state prediction
         self.loss_pred = tf.reduce_mean(MSE(obs[:, self.num_recon_steps:, :], x_adv[:, self.num_recon_steps:, :]))

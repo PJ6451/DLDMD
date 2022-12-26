@@ -136,18 +136,18 @@ class DLDMD(keras.Model):
         #calculating eigenvalues/vectors/modes
         evals, evecs = np.linalg.eig(comp_mat)
         modes = X.dot(evecs)
-
+        amps = np.linalg.pinv(modes) @ y0
+        
         #Reconstruction, forecasting
-        Psi = np.vander(evals, N = self.num_pred_steps, increasing=True)
+        Psi = np.vander(evals, N = self.num_pred_steps, increasing=True) * amps[...,None]
         recon = modes.dot(Psi)
 
         #unstack data
-        unstacked_data = np.zeros([data.shape[0], self.num_time_steps, data.shape[1]])
+        unstacked_data = np.zeros([data.shape[0], self.num_pred_steps, data.shape[1]])
         for i in range(data.shape[1]):
             unstacked_data[:,:,i] = np.real(recon[(i)*data.shape[0]:(i+1)*data.shape[0],:])
 
         recon = tf.convert_to_tensor(unstacked_data, dtype = 'float64')
-        recon = tf.math.real(tf.squeeze(recon))
 
         return recon, evals, evecs, modes
 
