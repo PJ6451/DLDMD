@@ -14,8 +14,8 @@ matplotlib.rc('font', **font)
 def diagnostic_plot(y_pred, y_true, hyp_params, epoch, save_path, loss_comps, val_loss):
     if hyp_params['experiment'] == 'pendulum':
         plot_2D(y_pred, y_true, hyp_params, epoch, save_path, loss_comps, val_loss)
-    elif hyp_params['experiment'] == 'duffing' or \
-            hyp_params['experiment'] == 'van_der_pol' or \
+    elif hyp_params['experiment'] == 'rossler' or \
+            hyp_params['experiment'] == 'lorenz96' or \
                 hyp_params['experiment'] == 'lorenz':
         plot_3d_latent(y_pred, y_true, hyp_params, epoch, save_path, loss_comps, val_loss)
     else:
