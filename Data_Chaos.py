@@ -25,7 +25,7 @@ def lorenz63(lhs):
 
 
 def rossler(lhs):
-    aval, bval, cval = .1, .1, 5.7
+    aval, bval, cval = .1, .1, 14.
     y1, y2, y3 = lhs[0], lhs[1], lhs[2]
     rhs = np.zeros(3, dtype=np.float64)
     rhs[0] = -y2 - y3
@@ -68,8 +68,7 @@ def data_builder(n_ic, dim, x0, tf, dt, dyn_sys):
     initconds = np.zeros((n_ic, dim), dtype=np.float64)
     rawdata = np.zeros([n_ic, dim, nsteps], dtype=np.float64)
     for ll in range(n_ic):
-        initconds[ll,:-1] = 5*np.random.uniform(-1,1,2)
-        initconds[ll,:] = initconds[ll,:] + np.random.uniform(-.5,.5,dim)
+        initconds[ll,:-1] = np.random.uniform(-10.,10.,2)
         rawdata[ll,:,:] = timestepper(initconds[ll,:], 0, tf, dt, dyn_sys)
 
     return np.transpose(rawdata, [0, 2, 1])
@@ -96,8 +95,8 @@ if __name__ == "__main__":
         # Generate the data
         data_fname = 'rossler_data.pkl'
         x0 = np.array([.1, .1, .1])
-        data = data_builder(150, 3, x0, 10., 0.05, rossler)
-        #pickle.dump(data, open(data_fname, 'wb'))
+        data = data_builder(15000, 3, x0, 30., 0.05, rossler)
+        pickle.dump(data, open(data_fname, 'wb'))
         for ii in range(data.shape[0]):
             ax.plot3D(data[ii, :, 0], data[ii, :, 1], data[ii, :, 2], '-')
         ax.set_xlabel("x1", fontsize=18)
@@ -112,3 +111,9 @@ if __name__ == "__main__":
         x0 = np.array([8.1, 8., 8., 8., 8.])
         data = data_builder(150, 3, x0, 30., 0.05, lorenz96)
         pickle.dump(data, open(data_fname, 'wb'))
+        for ii in range(data.shape[0]):
+            ax.plot3D(data[ii, :, 0], data[ii, :, 1], data[ii, :, 2], '-')
+        ax.set_xlabel("x1", fontsize=18)
+        ax.set_ylabel("X2", fontsize=18)
+        ax.set_zlabel("X3", fontsize=18)
+        plt.show()

@@ -192,7 +192,7 @@ def vdp():
 
 def lorenz():
     # Generate the data
-    numiconds = 80
+    numiconds = 1
     numdim = 3
     t0 = 0
     tf = 30.
@@ -203,13 +203,24 @@ def lorenz():
     rawdata = data_builder(numiconds, numdim, x0, tf, dt, lorenz63)
     
     #dmd
-    cm_data, evals = raw_proc_data(rawdata, numiconds, numdim, NT, tvals, dt)
+    #cm_data, evals = raw_proc_data(rawdata, numiconds, numdim, NT, tvals, dt)
 
-    make_plots_3D(rawdata, cm_data, evals, 'l63')
+    #make_plots_3D(rawdata, cm_data, evals, 'l63')
+
+    fig = plt.figure()
+    traj = rawdata[0,:,:]
+    #RK4
+    ax = fig.add_subplot(111, projection='3d')
+    ax.plot3D(traj[0,:], traj[1,:], traj[2,:],linewidth=1,label='rk4')
+    ax.set_xlabel("$x$")
+    ax.set_ylabel("$y$")
+    ax.set_zlabel("$z$")
+    ax.set_title("Phase Plane")
+    fig.savefig("l63", dpi=200)
 
 def ross():
     # Generate the data
-    numiconds = 40
+    numiconds = 1
     numdim = 3
     t0 = 0
     tf = 30.
@@ -220,9 +231,20 @@ def ross():
     rawdata = data_builder_ross(numiconds, numdim, x0, tf, dt, rossler)
     
     #dmd
-    cm_data, evals  = raw_proc_data(rawdata, numiconds, numdim, NT, tvals, dt)
+    #cm_data, evals  = raw_proc_data(rawdata, numiconds, numdim, NT, tvals, dt)
 
-    make_plots_3D(rawdata, cm_data, evals, 'ross')
+    #make_plots_3D(rawdata, cm_data, evals, 'ross')
+
+    fig = plt.figure()
+    traj = rawdata[0,:,:]
+    #RK4
+    ax = fig.add_subplot(111, projection='3d')
+    ax.plot3D(traj[0,:], traj[1,:], traj[2,:],linewidth=1,label='rk4')
+    ax.set_xlabel("$y_1$")
+    ax.set_ylabel("$y_2$")
+    ax.set_zlabel("$y_3$")
+    ax.set_title("Phase Plane")
+    fig.savefig("rossler", dpi=200)
 
 def lorenz_96():
     # Generate the data
@@ -267,9 +289,9 @@ def make_plots_3D(rawdata,cm_data,evals,hdle):
 if __name__ == '__main__':
     #cent()
     #spir()
-    harm()
+    #harm()
     #duff()
     #vdp()
-    #lorenz()
-    #ross()
+    lorenz()
+    ross()
     #lorenz_96()

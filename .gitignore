@@ -1,15 +1,4 @@
 # Ignore these
-*_data.pkl
-data_train.pkl
-data_val.pkl
-data_test.pkl
-trained_models/
-training_results/
-*.png
-*.pkl
-*.h5
-*.zip
-*.txt
 .DS_Store
 
 # Byte-compiled / optimized / DLL files
@@ -22,7 +11,6 @@ __pycache__/
 
 # File types
 *_data.pkl
-*.png
 #*.pkl
 #*.h5
 .DS_Store

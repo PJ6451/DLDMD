@@ -131,7 +131,7 @@ def plot_3d_latent(y_pred, y_true, hyp_params, epoch, save_path, loss_comps, val
     matplotlib.rc('font', **font)
 
     skip = 8
-    fig = plt.figure(figsize=(40, 20))
+    fig = plt.figure(figsize=(40, 20),facecolor='white')
 
     # Validation batch
     ax = fig.add_subplot(3, 3, 1, projection='3d')
