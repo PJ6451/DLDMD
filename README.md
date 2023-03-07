@@ -1,3 +1,19 @@
 # DLDMD
-Deep learning assisted dynamic mode decomposition
-Refer to examples for traning results
+
+This is an extentsion of Deep Learning Dynamic Mode Decomposition, which utilizes the companion matrix formula in order to improve results with respect to chaotic systems.
+
+# The Basics
+
+For the uninitiated, Dynamic Mode Decomposition (DMD) utilizes a data-centric approach to calculate finite approximations of the _Koopman Operator_. At a high level, time-series data is often presented as a collection of things we can actually measure. These can be temperature, velocity, pressure, prices, etc. What Bernard Koopman proposed in 1931 is that the dynamics of whatever system we're interested in can be thought of in terms of a linear operator. It has been shown that DMD finds a finite-dimensional matrix approximation of this operator, for which spectral decomposition can be performed. The eigenvalue decomposition of this matrix gives us the eigenvalues $\lambda_i$ and eigenvectors $v_i$, which then can be used to compute the dynamic modes $w_i$ of the data (think of modes as the individual building blocks of a time-series/signal). Finally, we can reconstruct and forecast our data using the equation $$ x_k = \sum_{i=1} \lambda_i^k \w_i $$. To get a better understanding, please refer to [this paper.]{https://flair.monash.edu.au/intranet/proceedings/piv2009/Site/CB1_Fundamentals_4_files/PIV09-0141.pdf#:~:text=The%20Dynamic%20Mode%20Decomposition%20%28DMD%29%20is%20a%20noveltechnique,equally%20to%20particle-imagevelocimetry%20data%20and%20image-based%20%EF%AC%82ow%20visualizations.}
+
+# Extended and Deep Learning DMD
+DMD on its own does not handle certain time-series problems, so further methods have been developed. Extended DMD basically first encodes the data through a series of non-linear dictionary functions, and DLDMD takes this a step further by letting an auto-encoder find an optimal dictionary through supervised learning ([see here]{https://aip.scitation.org/doi/full/10.1063/5.0073893#:~:text=We%20call%20this%20method%20the%20deep%20learning%20dynamic,enable%20data-driven%20prediction%20where%20the%20standard%20DMD%20fails.}). The main thing to note here is that both of these methods utilize a one-step method to approximating the Koopman operator, the other option being to utilize Krylov subspaces and the [Frobenious Companion Matrix]{https://arxiv.org/abs/1808.09557}. The second method would be more optimal from a mathematics standpoint, due to its similarity with ARMA/ARIMA based methods; however, it hasn't been used due to eigenvalues approximations being too high.
+
+While DLDMD has been shown to work for certain systems, two big issues remained. First, chaotic systems were not handled well, and second the forecasting ability was not being pushed. To rectify that, the reformulation seen here was introduced. The main changes is that DLDMD now finds the approximation of the Koopman Operator by using the Companion matrix.
+
+# Results
+The results can be found in the examples folders, but to summarize: DLDMD was now able to handle chaotic systems and forecast for multiple time-steps. As an example, refer to the image below, showing the results of DLDMD utilized on the Rossler system. For this experiment, $t_f = 30, dt = 0.05$ and the system is set to forecast 5 time-steps; the latent dimension of the auto-encoder was set to 5. The reconstruction is then from $0 \to 29.75$, and the prediction is from $29.75 \to 30$. From left to right, the top row shows the validation data, the reconstructed and forecast data utilizing CDMD, and the encoded-decoded raw data, The middle row shows the encoded data, the eigenvalues of the Companion matrix, and a semi-log plot of total loss calculated per epoch. The bottom row shows the semi-log plots for the reconstruction loss, the prediction loss, and the DMD loss.
+
+![Image](https://github.com/PJ6451/DLDMD/blob/main/examples/rossler/rossler_tf_30_pd_5_lifted_5.png)
+
+What this shows is that ultimately the auto-encoder was able to find a good, 5 dimensional lifting of the data in which DMD was able to perform extremely well. Further hyper-parameter tuning will hopefully bolster this.
