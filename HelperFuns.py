@@ -12,7 +12,7 @@ matplotlib.rc('font', **font)
 
 
 def diagnostic_plot(y_pred, y_true, hyp_params, epoch, save_path, loss_comps, val_loss):
-    if hyp_params['experiment'] == 'pendulum':
+    if hyp_params['experiment'] == 'harmonic':
         plot_2D(y_pred, y_true, hyp_params, epoch, save_path, loss_comps, val_loss)
     elif hyp_params['experiment'] == 'rossler' or \
             hyp_params['experiment'] == 'lorenz96' or \
@@ -23,12 +23,12 @@ def diagnostic_plot(y_pred, y_true, hyp_params, epoch, save_path, loss_comps, va
 
 
 def plot_2D(y_pred, y_true, hyp_params, epoch, save_path, loss_comps, val_loss):
-    enc = y_pred[0]
-    enc_dec = y_pred[1]
-    enc_adv_dec = y_pred[2]
-    enc_adv = y_pred[3]
+    enc_dec = y_pred[1].numpy()
+    enc_adv_dec = y_pred[2].numpy()
+    enc_adv = y_pred[3].numpy()
+    evals = y_pred[5]
 
-    fig, ax = plt.subplots(nrows=3, ncols=3, sharex=False, sharey=False, figsize=(40, 20))
+    fig, ax = plt.subplots(nrows=3, ncols=3, sharex=False, sharey=False, figsize=(40, 20), facecolor='white')
     ax = ax.flat
     skip = 16
 
@@ -50,34 +50,32 @@ def plot_2D(y_pred, y_true, hyp_params, epoch, save_path, loss_comps, val_loss):
     ax[1].set_ylabel("x2")
     ax[1].set_title("Encoded-Advanced-Decoded (x_adv))")
 
-    # Encoded time series
-    for ii in np.arange(0, enc.shape[0], skip):
-        ax[2].plot(enc[ii, :, 0], enc[ii, :, 1], '-')
-    ax[2].scatter(enc[::skip, 0, 0], enc[::skip, 0, 1])
-    ax[2].grid()
-    ax[2].set_xlabel("y1")
-    ax[2].set_ylabel("y2")
-    ax[2].axis("equal")
-    ax[2].set_title("Encoded (y)")
-
     # Encoded-decoded time series
     for ii in np.arange(0, enc_dec.shape[0], skip):
-        ax[3].plot(enc_dec[ii, :, 0], enc_dec[ii, :, 1], '-')
-    ax[3].scatter(enc_dec[::skip, 0, 0], enc_dec[::skip, 0, 1])
-    ax[3].grid()
-    ax[3].set_xlabel("x1")
-    ax[3].set_ylabel("x2")
-    ax[3].set_title("Encoded-Decoded (x_ae)")
+        ax[2].plot(enc_dec[ii, :, 0], enc_dec[ii, :, 1], '-')
+    ax[2].scatter(enc_dec[::skip, 0, 0], enc_dec[::skip, 0, 1])
+    ax[2].grid()
+    ax[2].set_xlabel("x1")
+    ax[2].set_ylabel("x2")
+    ax[2].set_title("Encoded-Decoded (x_ae)")
 
-    # Encoded-advanced time series
+    # Encoded time series
     for ii in np.arange(0, enc_adv.shape[0], skip):
-        ax[4].plot(enc_adv[ii, :, 0], enc_adv[ii, :, 1], '-')
-    ax[4].scatter(enc_adv[::skip, 0, 0], enc_adv[::skip, 0, 1])
-    ax[4].grid()
-    ax[4].set_xlabel("y1")
-    ax[4].set_ylabel("y2")
-    ax[4].axis("equal")
-    ax[4].set_title("Encoded-Advanced (y_adv))")
+        ax[3].plot(enc_adv[ii, :, 0], enc_adv[ii, :, 1], '-')
+    ax[3].scatter(enc_adv[::skip, 0, 0], enc_adv[::skip, 0, 1])
+    ax[3].grid()
+    ax[3].set_xlabel("y1")
+    ax[3].set_ylabel("y2")
+    ax[3].axis("equal")
+    ax[3].set_title("Encoded-Advanced (y_adv))")
+
+    # evals
+    t = np.linspace(0, 2*np.pi, 300)
+    ax[4].plot(np.cos(t), np.sin(t), linewidth=1)
+    ax[4].scatter(np.real(evals), np.imag(evals))
+    ax[4].set_xlabel("Real$(\lambda)$")
+    ax[4].set_ylabel("Imag$(\lambda)$")
+    ax[4].set_title("Eigenvalues")
 
     # Loss components
     lw = 3
@@ -116,7 +114,7 @@ def plot_2D(y_pred, y_true, hyp_params, epoch, save_path, loss_comps, val_loss):
             max_epoch=hyp_params['max_epochs'],
             lr=hyp_params['lr'],
             loss=val_loss[-1]))
-
+    plt.tight_layout()
     plt.savefig(save_path)
     plt.close()
 
@@ -127,11 +125,12 @@ def plot_3d_latent(y_pred, y_true, hyp_params, epoch, save_path, loss_comps, val
     enc_adv = y_pred[3].numpy()
     evals = y_pred[5]
 
-    font = {'family': 'DejaVu Sans', 'size': 10}
+    font = {'family': 'DejaVu Sans', 'size': 18}
     matplotlib.rc('font', **font)
 
-    skip = 8
+    skip = 16
     fig = plt.figure(figsize=(40, 20),facecolor='white')
+    fig.tight_layout()
 
     # Validation batch
     ax = fig.add_subplot(3, 3, 1, projection='3d')
@@ -235,6 +234,6 @@ def plot_3d_latent(y_pred, y_true, hyp_params, epoch, save_path, loss_comps, val
             max_epoch=hyp_params['max_epochs'],
             lr=hyp_params['lr'],
             loss=val_loss[-1]))
-
+    plt.tight_layout()
     plt.savefig(save_path)
     plt.close()

@@ -13,8 +13,8 @@ def spiral(lhs):
 def center(lhs):
     x1, x2 = lhs[0], lhs[1]
     rhs = np.zeros(2, dtype=np.float64)
-    rhs[0] = 4*x1 - 10*x2
-    rhs[1] = 2*x1 - 4*x2
+    rhs[0] = 0*x1 - 1*x2
+    rhs[1] = 1*x1 - 0*x2
     return rhs
 
 def saddle(lhs):

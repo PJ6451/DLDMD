@@ -3,19 +3,18 @@ import matplotlib.pyplot as plt
 from numerical_solvers import *
 from dmd import *
 
-def make_plots(rawdata, cm_data, evals, lbl):
+def make_plots(rawdata, cm_data, evals, lbl, Phi = None, Psi = None, tt = None, x = None):
     fig = plt.figure()
 
     #plot cm_data with recon
     ax = fig.add_subplot(111)
-    for i in range(10):
-        ax.plot(rawdata[i,0,:], rawdata[i,1,:],linewidth=2,linestyle='-',color='b')
-    #ax.plot(cm_data[0,0,:], cm_data[0,1,:],linewidth=2,linestyle='dashed', color='r',label='CM')
+    ax.plot(rawdata[0,0,:], rawdata[0,1,:],linewidth=2,linestyle='-',color='b',label='RK4')
+    ax.plot(cm_data[0,0,:], cm_data[0,1,:],linewidth=2,linestyle='dashed', color='r',label='CM')
     plt.xlabel('$x_1$')
     plt.ylabel('$x_2$')
     title = 'Phase Plane'
     plt.title(title)
-    #ax.legend()
+    ax.legend()
 
     fig.savefig("dmd_project_" + lbl, dpi=200)
 
@@ -30,6 +29,17 @@ def make_plots(rawdata, cm_data, evals, lbl):
     ax.set_title("Eigenvalues")
     fig.savefig("dmd_eig_"+lbl, dpi=200)
 
+    if Psi.any():
+        fig, ((ax1, ax2)) = plt.subplots(1, 2)
+        for mode in Phi.T:
+            ax1.plot(x, mode.real)
+            ax1.set_title('Modes')
+        for dynamic in Psi:
+            ax2.plot(tt, dynamic.real)
+            ax2.set_title('Dynamics')
+        fig.tight_layout()
+        fig.savefig("dmd_modes_dynamics_"+lbl, dpi=200)
+
 def raw_proc_data(rawdata, numiconds, numdim, NT, tvals, dt):
     #stack data
     stacked_data = np.zeros([numiconds*numdim, NT])
@@ -38,89 +48,58 @@ def raw_proc_data(rawdata, numiconds, numdim, NT, tvals, dt):
 
     #dmd
     thrshhld = 15
-    cm_recon, evals = cm_dmd(stacked_data, NT, thrshhld)
+    cm_recon, evals, Phi, Psi = cm_dmd(stacked_data, NT, thrshhld)
 
     #unstack data
     cm_data = np.zeros([numiconds, numdim, NT])
     for i in range(numdim):
         cm_data[:,i,:] = np.real(cm_recon[(i)*numiconds:(i+1)*numiconds,:])
 
-    return cm_data, evals
+    return cm_data, evals, Phi, Psi
 
 def cent():
     dt = .05
     t0 = 0.
-    tf = 10
+    tf = 10.
     NT = int((tf-t0)/dt)
+    xvals = np.linspace(-5,5,120)
     tvals = np.linspace(t0,tf,NT)
-    numiconds = 4
-    initconds = np.array([
-        [1,2],
-        [-4,3],
-        [1.5,-3],
-        [-1.2,-3.6]
-    ])
+    numiconds = 60
+    initconds = np.zeros([numiconds,2])
     numdim = 2
     rawdata = np.zeros([numiconds, numdim, NT], dtype=np.float64)
     fhandle = lambda x: center(x)
     for ll in range(numiconds):
+        initconds[ll,:] = np.random.uniform(-5,5,2)
         rawdata[ll,:,:] = timestepper(initconds[ll,:], t0, tf, dt, fhandle)
 
     #dmd
-    cm_data, evals = raw_proc_data(rawdata, numiconds, numdim, NT, tvals, dt)
+    cm_data, evals, Phi, Psi = raw_proc_data(rawdata, numiconds, numdim, NT, tvals, dt)
 
     #plot
-    make_plots(rawdata, cm_data, evals, 'Center')
-
-def sadd():
-    dt = .05
-    t0 = 0.
-    tf = .5
-    NT = int((tf-t0)/dt)
-    tvals = np.linspace(t0,tf,NT)
-    numiconds = 4
-    initconds = np.array([
-        [17,12],
-        [-14,13],
-        [10,-13],
-        [-10.2,-13.6]
-    ])
-    numdim = 2
-    rawdata = np.zeros([numiconds, numdim, NT], dtype=np.float64)
-    fhandle = lambda x: saddle(x)
-    for ll in range(numiconds):
-        rawdata[ll,:,:] = timestepper(initconds[ll,:], t0, tf, dt, fhandle)
-
-    #dmd
-    cm_data, _ = raw_proc_data(rawdata, numiconds, numdim, NT, tvals, dt)
-
-    #plot
-    make_plots(rawdata, cm_data, 'Saddle')
+    make_plots(rawdata, cm_data, evals, 'Center', Phi=Phi, Psi=Psi, tt=tvals, x=xvals)
 
 def spir():
     dt = .05
     t0 = 0.
-    tf = 10
+    tf = 10.
     NT = int((tf-t0)/dt)
     tvals = np.linspace(t0,tf,NT)
-    numiconds = 4
-    initconds = np.array([
-        [1,2],
-        [-4,3],
-        [1.5,-3],
-        [-1.2,-3.6]
-    ])
+    xvals = np.linspace(-5,5,120)
+    numiconds = 60
+    initconds = np.zeros([numiconds,2])
     numdim = 2
     rawdata = np.zeros([numiconds, numdim, NT], dtype=np.float64)
     fhandle = lambda x: spiral(x)
     for ll in range(numiconds):
+        initconds[ll,:] = np.random.uniform(-5,5,2)
         rawdata[ll,:,:] = timestepper(initconds[ll,:], t0, tf, dt, fhandle)
 
     #dmd
-    cm_data, evals = raw_proc_data(rawdata, numiconds, numdim, NT, tvals, dt)
+    cm_data, evals, Phi, Psi = raw_proc_data(rawdata, numiconds, numdim, NT, tvals, dt)
 
     #plot
-    make_plots(rawdata, cm_data, evals, 'Spiral_attractor')
+    make_plots(rawdata, cm_data, evals, 'Spiral_Attractor', Phi=Phi, Psi=Psi, tt=tvals, x=xvals)
 
 def harm():
     dt = .05
@@ -138,7 +117,7 @@ def harm():
         rawdata[ll,:,:] = timestepper(initconds[ll,:], t0, tf, dt, fhandle)
 
     #dmd
-    cm_data, evals = raw_proc_data(rawdata, numiconds, numdim, NT, tvals, dt)
+    cm_data, evals,_,_ = raw_proc_data(rawdata, numiconds, numdim, NT, tvals, dt)
 
     #plot
     make_plots(rawdata, cm_data, evals, 'Harmonic_Oscilator')
@@ -163,10 +142,10 @@ def duff():
     plt.show()
 
     #dmd
-    cm_data, svd_data = raw_proc_data(rawdata, numiconds, numdim, NT, tvals, dt)
+    cm_data, evals,_,_ = raw_proc_data(rawdata, numiconds, numdim, NT, tvals, dt)
 
     #plot
-    make_plots(rawdata, cm_data, svd_data, tvals, 4, 'Duffing_Oscilator')
+    make_plots(rawdata, cm_data, evals, 4, 'Duffing_Oscilator')
 
 def vdp():
     mu = .1
@@ -185,7 +164,7 @@ def vdp():
         rawdata[ll] = timestepper(initconds[ll,:], t0, tf, dt, fhandle)
 
     #dmd
-    cm_data, evals = raw_proc_data(rawdata, numiconds, numdim, NT, tvals, dt)
+    cm_data, evals,_,_ = raw_proc_data(rawdata, numiconds, numdim, NT, tvals, dt)
 
     #plot
     make_plots(rawdata, cm_data, evals, 'VDP_Oscilator_mu_small_tf_big')
@@ -203,9 +182,9 @@ def lorenz():
     rawdata = data_builder(numiconds, numdim, x0, tf, dt, lorenz63)
     
     #dmd
-    #cm_data, evals = raw_proc_data(rawdata, numiconds, numdim, NT, tvals, dt)
+    cm_data, evals,_,_ = raw_proc_data(rawdata, numiconds, numdim, NT, tvals, dt)
 
-    #make_plots_3D(rawdata, cm_data, evals, 'l63')
+    make_plots_3D(rawdata, cm_data, evals, 'l63')
 
     fig = plt.figure()
     traj = rawdata[0,:,:]
@@ -231,7 +210,7 @@ def ross():
     rawdata = data_builder_ross(numiconds, numdim, x0, tf, dt, rossler)
     
     #dmd
-    #cm_data, evals  = raw_proc_data(rawdata, numiconds, numdim, NT, tvals, dt)
+    #cm_data, evals,_,_  = raw_proc_data(rawdata, numiconds, numdim, NT, tvals, dt)
 
     #make_plots_3D(rawdata, cm_data, evals, 'ross')
 
@@ -259,7 +238,7 @@ def lorenz_96():
     rawdata = data_builder(numiconds, numdim, x0, tf, dt, lorenz96)
     
     #dmd
-    cm_data, evals = raw_proc_data(rawdata, numiconds, numdim, NT, tvals, dt)
+    cm_data, evals,_,_ = raw_proc_data(rawdata, numiconds, numdim, NT, tvals, dt)
 
     make_plots_3D(rawdata, cm_data, evals, 'l96')
 
@@ -289,9 +268,9 @@ def make_plots_3D(rawdata,cm_data,evals,hdle):
 if __name__ == '__main__':
     #cent()
     #spir()
-    #harm()
+    harm()
     #duff()
     #vdp()
-    lorenz()
-    ross()
+    #lorenz()
+    #ross()
     #lorenz_96()

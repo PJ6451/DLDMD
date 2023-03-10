@@ -3,7 +3,7 @@
         Opal Issan
 
     Modified:
-        17 Nov 2020 - Jay Lago
+        8 March 2023 - Michael Johnson
 """
 import numpy as np
 import pickle
@@ -14,6 +14,13 @@ import matplotlib.pyplot as plt
 # ==============================================================================
 # Dynamical System Functions
 # ==============================================================================
+def harmonic(lhs):
+    x1, x2 = lhs[0], lhs[1]
+    rhs = np.zeros(2, dtype=np.float64)
+    rhs[0] = x2
+    rhs[1] = -np.sin(x1)
+    return rhs
+
 def lorenz63(lhs):
     sigma, rval, bval = 10., 28., 8./3.
     y1, y2, y3 = lhs[0], lhs[1], lhs[2]
@@ -68,7 +75,32 @@ def data_builder(n_ic, dim, x0, tf, dt, dyn_sys):
     initconds = np.zeros((n_ic, dim), dtype=np.float64)
     rawdata = np.zeros([n_ic, dim, nsteps], dtype=np.float64)
     for ll in range(n_ic):
+        initconds[ll,:-1] = 8.*(np.random.rand(dim) - .5) + x0
+        rawdata[ll,:,:] = timestepper(initconds[ll,:], 0, tf, dt, dyn_sys)
+
+    return np.transpose(rawdata, [0, 2, 1])
+
+def data_builder_ross(n_ic, dim, tf, dt, dyn_sys):
+    nsteps = int(tf / dt)
+    n_ic = int(n_ic)
+    # Generate initial conditions
+    initconds = np.zeros((n_ic, dim), dtype=np.float64)
+    rawdata = np.zeros([n_ic, dim, nsteps], dtype=np.float64)
+    for ll in range(n_ic):
         initconds[ll,:-1] = np.random.uniform(-10.,10.,2)
+        rawdata[ll,:,:] = timestepper(initconds[ll,:], 0, tf, dt, dyn_sys)
+
+    return np.transpose(rawdata, [0, 2, 1])
+
+def data_builder_harm(n_ic, dim, tf, dt, dyn_sys):
+    nsteps = int(tf / dt)
+    n_ic = int(n_ic)
+    # Generate initial conditions
+    initconds = np.zeros((n_ic, dim), dtype=np.float64)
+    rawdata = np.zeros([n_ic, dim, nsteps], dtype=np.float64)
+    for ll in range(n_ic):
+        initconds[ll,0] = np.random.uniform(-10.,10.,1)
+        initconds[ll,1] = np.random.uniform(-2.,2.,1)
         rawdata[ll,:,:] = timestepper(initconds[ll,:], 0, tf, dt, dyn_sys)
 
     return np.transpose(rawdata, [0, 2, 1])
@@ -79,10 +111,11 @@ def data_builder(n_ic, dim, x0, tf, dt, dyn_sys):
 # ==============================================================================
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
-    ax = plt.axes(projection='3d')
+    ax = plt.axes()
     create_lorenz63 = False
-    create_rossler = True
+    create_rossler = False
     create_lorenz96 = False
+    create_harmonic = True
 
     if create_lorenz63:
         # Generate the data
@@ -94,8 +127,7 @@ if __name__ == "__main__":
     if create_rossler:
         # Generate the data
         data_fname = 'rossler_data.pkl'
-        x0 = np.array([.1, .1, .1])
-        data = data_builder(15000, 3, x0, 30., 0.05, rossler)
+        data = data_builder_ross(15000, 3, 30., 0.05, rossler)
         pickle.dump(data, open(data_fname, 'wb'))
         for ii in range(data.shape[0]):
             ax.plot3D(data[ii, :, 0], data[ii, :, 1], data[ii, :, 2], '-')
@@ -103,7 +135,6 @@ if __name__ == "__main__":
         ax.set_ylabel("X2", fontsize=18)
         ax.set_zlabel("X3", fontsize=18)
         plt.show()
-
 
     if create_lorenz96:
         # Generate the data
@@ -116,4 +147,14 @@ if __name__ == "__main__":
         ax.set_xlabel("x1", fontsize=18)
         ax.set_ylabel("X2", fontsize=18)
         ax.set_zlabel("X3", fontsize=18)
+        plt.show()
+
+    if create_harmonic:
+        data_fname = 'harmonic_data.pkl'
+        data = data_builder_harm(15000, 2, 3., 0.01, harmonic)
+        pickle.dump(data, open(data_fname, 'wb'))
+        for ii in range(data.shape[0]):
+            ax.plot(data[ii, :, 0], data[ii, :, 1], '-')
+        ax.set_xlabel("x1", fontsize=18)
+        ax.set_ylabel("X2", fontsize=18)
         plt.show()

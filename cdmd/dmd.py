@@ -1,4 +1,6 @@
 import numpy as np
+import matplotlib.pyplot as plt
+from pydmd import DMD
 
 def dmd(data, NT, thrshhld):
     x_0 = data[:,0]
@@ -59,4 +61,4 @@ def cm_dmd(data, NT, thrshhld):
 
     recon = Phi.dot(Psi)
 
-    return recon, evals
+    return recon, evals, Phi, Psi
