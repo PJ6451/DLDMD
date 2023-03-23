@@ -80,7 +80,7 @@ class DLDMD(keras.Model):
         yt = tf.transpose(y, [0, 2, 1])
 
         # Generate latent time series using DMD prediction
-        y_adv, evals, evecs, phi = self.edmd(yt)
+        y_adv, evals, evecs, phi = self.cdmd(yt[:,:,:self.num_recon_steps])
 
         # Decode the latent trajectories
         x_adv = self.decoder(y_adv)
@@ -114,7 +114,7 @@ class DLDMD(keras.Model):
         recon = tf.math.real(tf.transpose(tf.squeeze(recon.stack()), perm=[1, 0, 2]))
         return recon, evals, evecs, phi
 
-    def cmdmd(self, tfdata):
+    def cdmd(self, tfdata):
         # assign values for regression
         data = tfdata.numpy()
 
@@ -140,17 +140,19 @@ class DLDMD(keras.Model):
 
         #calculating eigenvalues/vectors/modes
         evals, evecs = np.linalg.eig(comp_mat)
-        Phi = X @ evecs
-        amps = np.linalg.pinv(Phi) @ x_0[...,None]
+        modes = X @ evecs
+        amps = np.linalg.pinv(modes) @ x_0[...,None]
 
         #reconstruction
         Psi = np.zeros((evals.shape[0],evals.shape[1],self.num_pred_steps),dtype='complex64')
         for i in range(evals.shape[0]):
             Psi[i,:,:] = np.vander(evals[i,:], N = self.num_pred_steps, increasing=True) * amps[i,:]
 
-        recon = Phi @ Psi
+        recon = modes @ Psi
 
-        return recon.real, evals, Phi, Psi
+        recon = tf.convert_to_tensor(recon, dtype = 'float64')
+
+        return recon, evals, evecs, modes
 
     def get_config(self):
         base_config = super().get_config()
