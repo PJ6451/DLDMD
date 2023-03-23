@@ -80,7 +80,7 @@ class DLDMD(keras.Model):
         yt = tf.transpose(y, [0, 2, 1])
 
         # Generate latent time series using DMD prediction
-        y_adv, evals, evecs, phi = self.cmdmd(yt[:,:,:self.num_recon_steps])
+        y_adv, evals, evecs, phi = self.edmd(yt)
 
         # Decode the latent trajectories
         x_adv = self.decoder(y_adv)
@@ -118,38 +118,39 @@ class DLDMD(keras.Model):
         # assign values for regression
         data = tfdata.numpy()
 
-        #stack data
-        stacked_data = np.zeros([data.shape[0]*data.shape[1], data.shape[2]])
-        for i in range(data.shape[1]):
-            stacked_data[(i)*data.shape[0]:(i+1)*data.shape[0],:] = data[:,i,:]
-
-        y0 = stacked_data[:,0]
-        y = stacked_data[:,-1]
-        X = stacked_data[:,:-1]
+        # assign values for regression
+        x_0 = data[:, :, 0]
+        y = data[:, :, -1]
+        X = data[:, :, :-1]
 
         #svd and building companion matrix
         u, s, vh = np.linalg.svd(X, full_matrices=False)
+        uh = np.zeros([u.shape[0],u.shape[2],u.shape[1]])
+        v = np.zeros([vh.shape[0],vh.shape[2],vh.shape[1]])
+        sr = np.zeros([s.shape[0],s.shape[1],s.shape[1]])
+        comp_mat = np.zeros([data.shape[0],X.shape[2],X.shape[2]])
+        for i in range(data.shape[0]):
+            uh[i,:,:] = u[i,:,:].conj().T
+            v[i,:,:] = vh[i,:,:].conj().T
+            sr[i,:,:] = np.diag(1./s[i,:])
+            comp_mat[i,:,:] = np.diag(np.array([1.]*(self.num_recon_steps-2)), k = -1)
 
-        comp_mat = np.diag(np.array([1.]*(self.num_recon_steps-2)), k = -1)
-        comp_mat[:,-1] = np.conj(vh.T) @ np.diag(1. / s) @ np.conj(u.T) @ y
+        c = v @ sr @ uh @ y[...,None]
+        comp_mat[:, :, -1] = c[:,:,0]
 
         #calculating eigenvalues/vectors/modes
         evals, evecs = np.linalg.eig(comp_mat)
-        modes = X.dot(evecs)
-        amps = np.linalg.pinv(modes) @ y0
-        
-        #Reconstruction, forecasting
-        Psi = np.vander(evals, N = self.num_pred_steps, increasing=True) * amps[...,None]
-        recon = modes.dot(Psi)
+        Phi = X @ evecs
+        amps = np.linalg.pinv(Phi) @ x_0[...,None]
 
-        #unstack data
-        unstacked_data = np.zeros([data.shape[0], self.num_pred_steps, data.shape[1]])
-        for i in range(data.shape[1]):
-            unstacked_data[:,:,i] = np.real(recon[(i)*data.shape[0]:(i+1)*data.shape[0],:])
+        #reconstruction
+        Psi = np.zeros((evals.shape[0],evals.shape[1],self.num_pred_steps),dtype='complex64')
+        for i in range(evals.shape[0]):
+            Psi[i,:,:] = np.vander(evals[i,:], N = self.num_pred_steps, increasing=True) * amps[i,:]
 
-        recon = tf.convert_to_tensor(unstacked_data, dtype = 'float64')
+        recon = Phi @ Psi
 
-        return recon, evals, evecs, modes
+        return recon.real, evals, Phi, Psi
 
     def get_config(self):
         base_config = super().get_config()

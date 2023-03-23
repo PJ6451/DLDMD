@@ -125,12 +125,11 @@ def plot_3d_latent(y_pred, y_true, hyp_params, epoch, save_path, loss_comps, val
     enc_adv = y_pred[3].numpy()
     evals = y_pred[5]
 
-    font = {'family': 'DejaVu Sans', 'size': 18}
+    font = {'family': 'DejaVu Sans', 'size': 24}
     matplotlib.rc('font', **font)
 
     skip = 16
     fig = plt.figure(figsize=(40, 20),facecolor='white')
-    fig.tight_layout()
 
     # Validation batch
     ax = fig.add_subplot(3, 3, 1, projection='3d')
@@ -188,7 +187,7 @@ def plot_3d_latent(y_pred, y_true, hyp_params, epoch, save_path, loss_comps, val
     ax = fig.add_subplot(3, 3, 5)
     t = np.linspace(0, 2*np.pi, 300)
     ax.plot(np.cos(t), np.sin(t), linewidth=1)
-    ax.scatter(np.real(evals), np.imag(evals))
+    ax.scatter(np.real(evals[0,:]), np.imag(evals[0,:]))
     ax.set_xlabel("Real$(\lambda)$")
     ax.set_ylabel("Imag$(\lambda)$")
     ax.set_title("Eigenvalues")

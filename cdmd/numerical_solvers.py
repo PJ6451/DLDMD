@@ -110,7 +110,6 @@ def data_builder_ross(n_ic, dim, x0, tf, dt, dyn_sys):
     rawdata = np.zeros([n_ic, dim, nsteps], dtype=np.float64)
     for ll in range(n_ic):
         initconds[ll,:-1] = 8*np.random.uniform(-1.,1.,2)
-        initconds[ll,:] = initconds[ll,:] + np.random.uniform(-.5,.5,dim)
         rawdata[ll,:,:] = timestepper(initconds[ll,:], 0, tf, dt, dyn_sys)
 
     return rawdata
