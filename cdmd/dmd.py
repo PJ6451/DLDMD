@@ -1,4 +1,5 @@
 import numpy as np
+import tensorflow as tf
 
 def dmd(data, NT, thrshhld):
     x_0 = data[:,0]
@@ -38,17 +39,13 @@ def cm_dmd(data, NT):
 
     #svd and building companion matrix
     u, s, vh = np.linalg.svd(X, full_matrices=False)
-    uh = np.zeros([u.shape[0],u.shape[2],u.shape[1]])
-    v = np.zeros([vh.shape[0],vh.shape[2],vh.shape[1]])
-    sr = np.zeros([s.shape[0],s.shape[1],s.shape[1]])
-    comp_mat = np.zeros([data.shape[0],X.shape[2],X.shape[2]])
-    for i in range(data.shape[0]):
-        uh[i,:,:] = u[i,:,:].conj().T
-        v[i,:,:] = vh[i,:,:].conj().T
-        sr[i,:,:] = np.diag(1./s[i,:])
-        comp_mat[i,:,:] = np.diag(np.array([1.]*(NT-2)), k = -1)
+    comp_mat = np.array(data.shape[0]*[np.diag(np.array([1.]*(NT-2)), k = -1)])
 
-    c = v @ sr @ uh @ y[...,None]
+    sigr_inv = tf.linalg.diag(1.0 / s)
+    Uh = tf.linalg.adjoint(u)
+    V = tf.linalg.adjoint(vh)
+
+    c = V @ sigr_inv @ Uh @ y[...,None]
     comp_mat[:, :, -1] = c[:,:,0]
 
     #calculating eigenvalues/vectors/modes

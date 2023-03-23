@@ -80,7 +80,7 @@ class DLDMD(keras.Model):
         yt = tf.transpose(y, [0, 2, 1])
 
         # Generate latent time series using DMD prediction
-        y_adv, evals, evecs, phi = self.cdmd(yt[:,:,:self.num_recon_steps])
+        y_adv, evals, evecs, modes = self.cdmd(yt[:,:,:self.num_recon_steps])
 
         # Decode the latent trajectories
         x_adv = self.decoder(y_adv)
@@ -88,7 +88,7 @@ class DLDMD(keras.Model):
         # Model weights
         weights = self.trainable_weights
 
-        return [y, x_ae, x_adv, y_adv, weights, evals, evecs, phi]
+        return [y, x_ae, x_adv, y_adv, weights, evals, evecs, modes]
 
     def edmd(self, Y):
         Y_m = Y[:, :, :-1]
@@ -125,17 +125,13 @@ class DLDMD(keras.Model):
 
         #svd and building companion matrix
         u, s, vh = np.linalg.svd(X, full_matrices=False)
-        uh = np.zeros([u.shape[0],u.shape[2],u.shape[1]])
-        v = np.zeros([vh.shape[0],vh.shape[2],vh.shape[1]])
-        sr = np.zeros([s.shape[0],s.shape[1],s.shape[1]])
-        comp_mat = np.zeros([data.shape[0],X.shape[2],X.shape[2]])
-        for i in range(data.shape[0]):
-            uh[i,:,:] = u[i,:,:].conj().T
-            v[i,:,:] = vh[i,:,:].conj().T
-            sr[i,:,:] = np.diag(1./s[i,:])
-            comp_mat[i,:,:] = np.diag(np.array([1.]*(self.num_recon_steps-2)), k = -1)
+        comp_mat = np.array(data.shape[0]*[np.diag(np.array([1.]*(NT-2)), k = -1)])
 
-        c = v @ sr @ uh @ y[...,None]
+        sigr_inv = tf.linalg.diag(1.0 / s)
+        Uh = tf.linalg.adjoint(u)
+        V = tf.linalg.adjoint(vh)
+
+        c = V @ sigr_inv @ Uh @ y[...,None]
         comp_mat[:, :, -1] = c[:,:,0]
 
         #calculating eigenvalues/vectors/modes
@@ -144,9 +140,9 @@ class DLDMD(keras.Model):
         amps = np.linalg.pinv(modes) @ x_0[...,None]
 
         #reconstruction
-        Psi = np.zeros((evals.shape[0],evals.shape[1],self.num_pred_steps),dtype='complex64')
+        Psi = np.zeros((evals.shape[0],evals.shape[1],NT),dtype='complex64')
         for i in range(evals.shape[0]):
-            Psi[i,:,:] = np.vander(evals[i,:], N = self.num_pred_steps, increasing=True) * amps[i,:]
+            Psi[i,:,:] = np.vander(evals[i,:], N = NT, increasing=True) * amps[i,:]
 
         recon = modes @ Psi
 

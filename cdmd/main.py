@@ -8,7 +8,7 @@ def make_plots(rawdata, cm_data, evals, lbl, Phi = None, Psi = None, tt = None, 
 
     #plot cm_data with recon
     ax = fig.add_subplot(111)
-    for i in range(1):
+    for i in range(10):
         ax.plot(rawdata[i,0,:], rawdata[i,1,:],linewidth=2,linestyle='-',color='b')
         ax.plot(cm_data[i,0,:], cm_data[i,1,:],linewidth=2,linestyle='dashed', color='r')
     ax.plot(rawdata[i,0,:], rawdata[i,1,:],linewidth=2,linestyle='-',color='b',label='RK4')
@@ -247,7 +247,7 @@ if __name__ == '__main__':
     #cent()
     #spir()
     #harm()
-    vdp()
-    #lorenz()
+    #vdp()
+    lorenz()
     #ross()
     #lorenz_96()
