@@ -80,7 +80,7 @@ class DLDMD(keras.Model):
         yt = tf.transpose(y, [0, 2, 1])
 
         # Generate latent time series using DMD prediction
-        y_adv, evals, evecs, modes = self.cdmd(yt[:,:,:self.num_recon_steps])
+        y_adv, evals, evecs, modes = self.cdmd_stacked(yt[:,:,:self.num_recon_steps])
 
         # Decode the latent trajectories
         x_adv = self.decoder(y_adv)
@@ -114,39 +114,69 @@ class DLDMD(keras.Model):
         recon = tf.math.real(tf.transpose(tf.squeeze(recon.stack()), perm=[1, 0, 2]))
         return recon, evals, evecs, phi
 
-    def cdmd(self, tfdata):
-        # assign values for regression
-        data = tfdata.numpy()
-
+    def cdmd(self, data):
         # assign values for regression
         x_0 = data[:, :, 0]
         y = data[:, :, -1]
         X = data[:, :, :-1]
 
         #svd and building companion matrix
-        u, s, vh = np.linalg.svd(X, full_matrices=False)
-        comp_mat = np.array(data.shape[0]*[np.diag(np.array([1.]*(NT-2)), k = -1)])
-
-        sigr_inv = tf.linalg.diag(1.0 / s)
-        Uh = tf.linalg.adjoint(u)
-        V = tf.linalg.adjoint(vh)
+        sig, U, V = tf.linalg.svd(X, compute_uv=True, full_matrices=False)
+        sigr_inv = tf.linalg.diag(1.0 / sig)
+        Uh = tf.linalg.adjoint(U)
+        comp_mat = np.array(data.shape[0]*[np.diag(np.array([1.]*(self.num_recon_steps-2)), k = -1)])
 
         c = V @ sigr_inv @ Uh @ y[...,None]
         comp_mat[:, :, -1] = c[:,:,0]
+        comp_mat = tf.convert_to_tensor(comp_mat)
 
         #calculating eigenvalues/vectors/modes
+        evals, evecs = tf.linalg.eig(comp_mat)
+        Phi = tf.cast(X, dtype=self.precision_complex) @ evecs
+        amps = np.linalg.pinv(Phi.numpy()) @ x_0[...,None]
+        amps = tf.cast(amps,dtype=self.precision_complex)
+
+        recon = tf.TensorArray(self.precision_complex, size=self.num_pred_steps)
+        recon = recon.write(0, Phi @ amps)
+        evals_k = tf.identity(evals)
+        for ii in tf.range(1, self.num_pred_steps):
+            tmp = Phi @ (tf.linalg.diag(evals_k) @ amps)
+            recon = recon.write(ii, tmp)
+            evals_k = evals_k * evals
+        recon = tf.math.real(tf.transpose(tf.squeeze(recon.stack()), perm=[1, 0, 2]))
+        return recon, evals, evecs, Phi
+    
+    def cdmd_stacked(self, tfdata):
+        # transfer to numpy
+        data = tfdata.numpy()
+
+        # stack data
+        stacked_data = np.row_stack(data)
+
+        # assign values for auto-regression
+        y0 = stacked_data[:,0]
+        y = stacked_data[:,-1]
+        X = stacked_data[:,:-1]
+
+        # compute svd and build companion matrix
+        u, s, vh = np.linalg.svd(X, full_matrices=False)
+
+        comp_mat = np.diag(np.array([1.]*(self.num_recon_steps-2)), k = -1)
+        comp_mat[:,-1] = np.conj(vh.T) @ np.diag(1. / s) @ np.conj(u.T) @ y
+
+        # calculate eigenvalues/vectors/modes
         evals, evecs = np.linalg.eig(comp_mat)
-        modes = X @ evecs
-        amps = np.linalg.pinv(modes) @ x_0[...,None]
+        modes = X.dot(evecs)
+        amps = np.linalg.pinv(modes) @ y0
+        
+        # Reconstruction, forecasting
+        Psi = np.vander(evals, N = self.num_pred_steps, increasing=True) * amps[...,None]
+        recon = modes.dot(Psi)
 
-        #reconstruction
-        Psi = np.zeros((evals.shape[0],evals.shape[1],NT),dtype='complex64')
-        for i in range(evals.shape[0]):
-            Psi[i,:,:] = np.vander(evals[i,:], N = NT, increasing=True) * amps[i,:]
+        # unstack data
+        unstacked_data = np.resize(recon, data.shape)
 
-        recon = modes @ Psi
-
-        recon = tf.convert_to_tensor(recon, dtype = 'float64')
+        recon = tf.convert_to_tensor(unstacked_data, dtype = 'float64')
 
         return recon, evals, evecs, modes
 

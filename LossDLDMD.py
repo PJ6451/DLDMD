@@ -5,6 +5,7 @@
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.losses import MSE
+import numpy as np
 
 
 class LossDLDMD(keras.losses.Loss):
@@ -40,7 +41,7 @@ class LossDLDMD(keras.losses.Loss):
         self.loss_recon = tf.reduce_mean(MSE(obs, x_ae))
 
         # DMD reconstruction in the latent space
-        self.loss_dmd = tf.reduce_mean(MSE(y, y_adv))
+        self.loss_dmd = self.stacked_cdmd_loss(y)
 
         # Future state prediction
         self.loss_pred = tf.reduce_mean(MSE(obs, x_adv))
@@ -63,6 +64,13 @@ class LossDLDMD(keras.losses.Loss):
         eye_mat = tf.eye(VVh.shape[-1], batch_shape=[VVh.shape[0]], dtype=self.precision)
         return tf.reduce_mean(tf.norm(y_p @ (eye_mat - VVh), ord='fro', axis=[-2, -1]))
 
+    def stacked_cdmd_loss(self, y):
+        Y = np.row_stack(y.numpy())
+        u, s, vh = np.linalg.svd(Y[:,self.num_recon_steps,:], full_matrices=False)
+        f_nr = Y[:,self.num_recon_steps-1,:]
+        loss = (Y @ np.conj(vh.T) @ np.diag(1. / s) @ np.conj(u.T) - np.eye(Y.shape[0])) * f_nr
+        return tf.reduce_mean(np.linalg.norm(loss, ord='fro'))
+    
     def get_config(self):
         base_config = super().get_config()
         return {**base_config,
